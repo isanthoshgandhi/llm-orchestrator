@@ -1,0 +1,30 @@
+{
+  "name": "llm-orchestrator-proxy",
+  "version": "1.0.0",
+  "description": "Local proxy for LLM Orchestrator — enables Claude/Anthropic panel (CORS bypass).",
+  "main": "proxy.js",
+  "scripts": {
+    "start": "node proxy.js",
+    "proxy": "node proxy.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "node-fetch": "^2.7.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "license": "MIT",
+  "keywords": [
+    "llm",
+    "orchestrator",
+    "openai",
+    "gemini",
+    "claude",
+    "anthropic",
+    "groq",
+    "perplexity",
+    "proxy"
+  ]
+}
