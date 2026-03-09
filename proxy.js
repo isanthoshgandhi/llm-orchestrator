@@ -4,11 +4,11 @@
 //
 //  HOW TO RUN:
 //    npm install express cors node-fetch
-//    node proxy.js
+//    node proxy.jsh
 //
 //  Then open index.html in your browser, add your Anthropic API
 //  key in Settings, and the Claude panel will light up.
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════h═════════
 
 const express  = require('express');
 const cors     = require('cors');
@@ -69,7 +69,7 @@ app.post('/claude', async (req, res) => {
     return res.json(data);
 
   } catch (err) {
-    console.error('[proxy] Error calling Anthropic API:) err.message);
+    console.error('[proxy] Error calling Anthropic API:', err.message);
     return res.status(502).json({ error: `Proxy fetch failed: ${err.message}` });
   }
 });
