@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>⚡ LLM Orchestrator</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --border: #2d3148;
+    --accent: #6366f1; --text: #e2e8f0; --muted: #64748b;
+    --green: #22c55e; --red: #ef4444; --yellow: #f59e0b;
+  }
+  body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  header h1 { font-size: 1.2rem; font-weight: 700; }
+  header h1 span { color: var(--accent); }
+  .header-right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+  button { cursor: pointer; border: none; border-radius: 8px; padding: 8px 16px; font-size: 0.875rem; font-weight: 600; transition: opacity .15s; }
+  button:hover { opacity: .85; }
+  #btn-send { background: var(--accent); color: #fff; padding: 10px 24px; font-size: 1rem; }
+  #btn-settings { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .prompt-bar { padding: 14px 20px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; gap: 10px; }
+  #prompt { flex: 1; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 0.95rem; resize: vertical; min-height: 56px; }
+  #prompt:focus { outline: 2px solid var(--accent); }
+  .settings-panel { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 20px; display: none; }
+  .settings-panel.open { display: block; }
+  .settings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .key-row { display: flex; flex-direction: column; gap: 4px; }
+  .key-row label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .key-row-inputs { display: flex; gap: 6px; }
+  .key-row input { flex: 1; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 0.85rem; font-family: monospace; }
+  .key-row input:focus { outline: 2px solid var(--accent); }
+  .key-row button { background: var(--accent); color: #fff; padding: 7px 12px; font-size: 0.8rem; }
+  .panels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 16px; flex: 1; }
+  @media (max-width: 1100px) { .panels { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 680px) { .panels { grid-template-columns: 1fr; } }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; min-height: 280px; }
+  .panel-header { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .panel-icon { font-size: 1.2rem; }
+  .panel-name { font-weight: 700; font-size: 0.9rem; }
+  .panel-model { font-size: 0.72rem; color: var(--muted); margin-left: auto; }
+  .panel-time { font-size: 0.72rem; color: var(--green); margin-left: 8px; display: none; }
+  .panel-body { flex: 1; padding: 12px 14px; overflow-y: auto; font-size: 0.875rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .panel-body.idle { color: var(--muted); }
+  .panel-body.loading { color: var(--muted); }
+  .panel-body.error { color: var(--red); }
+  .panel-body.locked { color: var(--muted); font-style: italic; }
+  .dot { display: inline-block; animation: blink 1s infinite; } .dot:nth-child(2) { animation-delay: .2s; } .dot:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%,80%,100%{opacity:0} 40%{opacity:1} }
+  .search-result { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .search-result:last-child { border-bottom: none; }
+  .search-result a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  .search-result a:hover { text-decoration: underline; }
+  .search-result p { color: var(--muted); font-size: 0.82rem; margin-top: 3px; }
+  .badge-free { background: #14532d; color: var(--green); font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+  .badge-proxy { background: #312e81; color: #a5b4fc; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:1.4rem">⚡</span>
+  <h1>LLM <span>Orchestrator</span></h1>
+  <span style="font-size:.8rem;color:var(--muted)">Query 6 AI models simultaneously</span>
+  <div class="header-right">
+    <button id="btn-settings" onclick="toggleSettings()">⚙ Settings</button>
+    <button id="btn-send" onclick="sendAll()">Send to All</button>
+  </div>
+</header>
+
+<div class="settings-panel" id="settings">
+  <div class="settings-grid">
+    <div class="key-row">
+      <label>OpenAI API Key</label>
+      <div class="key-row-inputs">
+        <input type="password" id="key-openai" placeholder="sk-..." />
+        <button onclick="saveKey('openai')">Save</button>
+      </div>
+    </div>
+    <div class="key-row">
+      <label>Gemini API Key</label>
+      <div class="key-row-inputs">
+        <input type="password" id="key-gemini" placeholder="AIza..." />
+        <button onclick="saveKey('gemini')">Save</button>
+      </div>
+    </div>
+    <div class="key-row">
+      <label>Perplexity API Key</label>
+      <div class="key-row-inputs">
+        <input type="password" id="key-perplexity" placeholder="pplx-..." />
+        <button onclick="saveKey('perplexity')">Save</button>
+      </div>
+    </div>
+    <div class="key-row">
+      <label>Groq API Key <span class="badge-free">FREE</span></label>
+      <div class="key-row-inputs">
+        <input type="password" id="key-groq" placeholder="gsk_..." />
+        <button onclick="saveKey('groq')">Save</button>
+      </div>
+    </div>
+    <div class="key-row">
+      <label>Google Search API Key <span class="badge-free">FREE</span></label>
+      <div class="key-row-inputs">
+        <input type="password" id="key-google-search" placeholder="AIza..." />
+        <button onclick="saveKey('google-search')">Save</button>
+      </div>
+    </div>
+    <div class="key-row">
+      <label>Google Search Engine ID (cx) <span class="badge-free">FREE</span></label>
+      <div class="key-row-inputs">
+        <input type="text" id="key-google-cx" placeholder="your-cx-id" />
+        <button onclick="saveKey('google-cx')">Save</button>
+      </div>
+    </div>
+    <div class="key-row">
+      <label>Anthropic API Key <span class="badge-proxy">needs proxy</span></label>
+      <div class="key-row-inputs">
+        <input type="password" id="key-claude" placeholder="sk-ant-..." />
+        <button onclick="saveKey('claude')">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="prompt-bar">
+  <textarea id="prompt" placeholder="Type your prompt here… (Ctrl+Enter or Cmd+Enter to send)"></textarea>
+  <button id="btn-send" onclick="sendAll()" style="align-self:flex-end">Send to All</button>
+</div>
+
+<div class="panels">
+  <div class="panel" id="panel-openai">
+    <div class="panel-header">
+      <span class="panel-icon">🤖</span>
+      <span class="panel-name">OpenAI</span>
+      <span class="panel-model">gpt-4o</span>
+      <span class="panel-time" id="time-openai"></span>
+    </div>
+    <div class="panel-body idle" id="body-openai">Add your OpenAI API key in Settings to unlock this panel.</div>
+  </div>
+
+  <div class="panel" id="panel-gemini">
+    <div class="panel-header">
+      <span class="panel-icon">✨</span>
+      <span class="panel-name">Google Gemini</span>
+      <span class="panel-model">gemini-1.5-flash</span>
+      <span class="panel-time" id="time-gemini"></span>
+    </div>
+    <div class="panel-body idle" id="body-gemini">Add your Gemini API key in Settings to unlock this panel.</div>
+  </div>
+
+  <div class="panel" id="panel-perplexity">
+    <div class="panel-header">
+      <span class="panel-icon">🔍</span>
+      <span class="panel-name">Perplexity</span>
+      <span class="panel-model">sonar-pro</span>
+      <span class="panel-time" id="time-perplexity"></span>
+    </div>
+    <div class="panel-body idle" id="body-perplexity">Add your Perplexity API key in Settings to unlock this panel.</div>
+  </div>
+
+  <div class="panel" id="panel-groq">
+    <div class="panel-header">
+      <span class="panel-icon">⚡</span>
+      <span class="panel-name">Groq</span>
+      <span class="panel-model">llama-3.3-70b-versatile</span>
+      <span class="panel-time" id="time-groq"></span>
+    </div>
+    <div class="panel-body idle" id="body-groq">Add your Groq API key in Settings to unlock this panel.</div>
+  </div>
+
+  <div class="panel" id="panel-google">
+    <div class="panel-header">
+      <span class="panel-icon">🌐</span>
+      <span class="panel-name">Google Search</span>
+      <span class="panel-model">Custom Search API</span>
+      <span class="panel-time" id="time-google"></span>
+    </div>
+    <div class="panel-body idle" id="body-google">Add your Google Search API key and CX in Settings to unlock this panel.</div>
+  </div>
+
+  <div class="panel" id="panel-claude">
+    <div class="panel-header">
+      <span class="panel-icon">🧠</span>
+      <span class="panel-name">Claude</span>
+      <span class="panel-model">claude-3-5-sonnet</span>
+      <span class="panel-time" id="time-claude"></span>
+    </div>
+    <div class="panel-body idle" id="body-claude">Add your Anthropic API key in Settings and run <code>node proxy.js</code> to unlock this panel.</div>
+  </div>
+</div>
+
+<script>
+  // ── Key management ────────────────────────────────────────────
+  const KEYS = ['openai','gemini','perplexity','groq','google-search','google-cx','claude'];
+  function loadKeys() {
+    KEYS.forEach(k => {
+      const el = document.getElementById('key-' + k);
+      if (el) el.value = localStorage.getItem('llmo_' + k) || '';
+    });
+  }
+  function saveKey(k) {
+    const el = document.getElementById('key-' + k);
+    if (!el) return;
+    localStorage.setItem('llmo_' + k, el.value.trim());
+    el.style.borderColor = 'var(--green)';
+    setTimeout(() => el.style.borderColor = '', 1000);
+  }
+  function getKey(k) { return localStorage.getItem('llmo_' + k) || ''; }
+
+  function toggleSettings() {
+    document.getElementById('settings').classList.toggle('open');
+  }
+
+  loadKeys();
+
+  // ── Keyboard shortcut ─────────────────────────────────────────
+  document.getElementById('prompt').addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); sendAll(); }
+  });
+
+  // ── UI helpers ────────────────────────────────────────────────
+  function setPanel(id, cls, html) {
+    const el = document.getElementById('body-' + id);
+    el.className = 'panel-body ' + cls;
+    el.innerHTML = html;
+  }
+  function setLoading(id) {
+    setPanel(id, 'loading', 'Thinking<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>');
+    const t = document.getElementById('time-' + id);
+    t.style.display = 'none';
+    t.textContent = '';
+  }
+  function setResult(id, text, ms) {
+    setPanel(id, '', escHtml(text));
+    const t = document.getElementById('time-' + id);
+    t.textContent = (ms / 1000).toFixed(2) + 's';
+    t.style.display = '';
+  }
+  function setError(id, msg) { setPanel(id, 'error', '⚠ ' + escHtml(msg)); }
+  function setLocked(id) { setPanel(id, 'locked', 'Add API key in Settings to unlock.'); }
+  function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ── Main send ─────────────────────────────────────────────────
+  async function sendAll() {
+    const prompt = document.getElementById('prompt').value.trim();
+    if (!prompt) return;
+
+    await Promise.allSettled([
+      callOpenAI(prompt),
+      callGemini(prompt),
+      callPerplexity(prompt),
+      callGroq(prompt),
+      callGoogleSearch(prompt),
+      callClaude(prompt),
+    ]);
+  }
+
+  // ── OpenAI ────────────────────────────────────────────────────
+  async function callOpenAI(prompt) {
+    const key = getKey('openai');
+    if (!key) { setLocked('openai'); return; }
+    setLoading('openai');
+    const t0 = Date.now();
+    try {
+      const r = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'gpt-4o', messages: [{ role: 'user', content: prompt }], max_tokens: 1024 })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error?.message || r.statusText);
+      setResult('openai', d.choices[0].message.content, Date.now() - t0);
+    } catch(e) { setError('openai', e.message); }
+  }
+
+  // ── Gemini ────────────────────────────────────────────────────
+  async function callGemini(prompt) {
+    const key = getKey('gemini');
+    if (!key) { setLocked('gemini'); return; }
+    setLoading('gemini');
+    const t0 = Date.now();
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error?.message || r.statusText);
+      setResult('gemini', d.candidates[0].content.parts[0].text, Date.now() - t0);
+    } catch(e) { setError('gemini', e.message); }
+  }
+
+  // ── Perplexity ────────────────────────────────────────────────
+  async function callPerplexity(prompt) {
+    const key = getKey('perplexity');
+    if (!key) { setLocked('perplexity'); return; }
+    setLoading('perplexity');
+    const t0 = Date.now();
+    try {
+      const r = await fetch('https://api.perplexity.ai/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'sonar-pro', messages: [{ role: 'user', content: prompt }], max_tokens: 1024 })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error?.message || r.statusText);
+      setResult('perplexity', d.choices[0].message.content, Date.now() - t0);
+    } catch(e) { setError('perplexity', e.message); }
+  }
+
+  // ── Groq ──────────────────────────────────────────────────────
+  async function callGroq(prompt) {
+    const key = getKey('groq');
+    if (!key) { setLocked('groq'); return; }
+    setLoading('groq');
+    const t0 = Date.now();
+    try {
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], max_tokens: 1024 })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error?.message || r.statusText);
+      setResult('groq', d.choices[0].message.content, Date.now() - t0);
+    } catch(e) { setError('groq', e.message); }
+  }
+
+  // ── Google Search ─────────────────────────────────────────────
+  async function callGoogleSearch(prompt) {
+    const key = getKey('google-search');
+    const cx  = getKey('google-cx');
+    if (!key || !cx) { setLocked('google'); return; }
+    setLoading('google');
+    const t0 = Date.now();
+    try {
+      const url = `https://www.googleapis.com/customsearch/v1?key=${key}&cx=${cx}&q=${encodeURIComponent(prompt)}&num=5`;
+      const r = await fetch(url);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error?.message || r.statusText);
+      const items = d.items || [];
+      if (!items.length) { setPanel('google', '', 'No results found.'); return; }
+      const html = items.map(i =>
+        `<div class="search-result"><a href="${i.link}" target="_blank" rel="noopener">${escHtml(i.title)}</a><p>${escHtml(i.snippet || '')}</p></div>`
+      ).join('');
+      document.getElementById('body-google').className = 'panel-body';
+      document.getElementById('body-google').innerHTML = html;
+      const t = document.getElementById('time-google');
+      t.textContent = ((Date.now() - t0) / 1000).toFixed(2) + 's';
+      t.style.display = '';
+    } catch(e) { setError('google', e.message); }
+  }
+
+  // ── Claude (via local proxy) ───────────────────────────────────
+  async function callClaude(prompt) {
+    const key = getKey('claude');
+    if (!key) { setLocked('claude'); return; }
+    setLoading('claude');
+    const t0 = Date.now();
+    try {
+      const r = await fetch('http://localhost:3001/claude', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, apiKey: key })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || r.statusText);
+      setResult('claude', d.content[0].text, Date.now() - t0);
+    } catch(e) {
+      setError('claude', e.message.includes('fetch') ? 'Proxy not running. Start it with: node proxy.js' : e.message);
+    }
+  }
+</script>
+</body>
+</html>
