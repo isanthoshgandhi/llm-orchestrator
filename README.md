@@ -8,14 +8,6 @@
 
 ---
 
-<!-- SCREENSHOT PLACEHOLDER -->
-<!--
-  Free Mode (2 panels active):
-  [Insert screenshot: free-mode.png]
-
-  Full 6-Panel Mode:
-  [Insert screenshot: full-mode.png]
--->
 
 ## What It Does
 
@@ -24,9 +16,9 @@ Open a single `index.html` file in your browser. Type one prompt. Hit **Send to 
 | Panel | Provider | Model | Cost |
 |-------|----------|-------|------|
 | 🤖 | OpenAI | GPT-4o | Paid |
-| ✨ | Google Gemini | gemini-1.5-pro | Paid |
-| 🔍 | Perplexity | sonar-large-128k-online | Paid |
-| ⚡ | **Groq** | llama-3.1-70b-versatile | **Free tier** |
+| ✨ | Google Gemini | gemini-1.5-flash | Paid |
+| 🔍 | Perplexity | sonar-pro | Paid |
+| ⚡ | **Groq** | llama-3.3-70b-versatile | **Free tier** |
 | 🌐 | **Google Search** | Custom Search API | **Free (100/day)** |
 | 🧠 | Claude (Anthropic) | claude-3-5-sonnet | Paid + proxy |
 
@@ -80,19 +72,19 @@ The Groq and Google Search panels light up instantly. The other 4 panels show a 
 
 - Get key: [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
 - Google AI Studio has a free tier with rate limits
-- Model: `gemini-1.5-pro`
+- Model: `gemini-1.5-flash`
 
 ### 3. Perplexity
 
 - Get key: [perplexity.ai/settings/api](https://www.perplexity.ai/settings/api)
 - Requires a paid Perplexity API subscription
-- Model: `llama-3.1-sonar-large-128k-online` (web-grounded)
+- Model: `sonar-pro` (web-grounded)
 
 ### 4. Groq — Free Tier ✅
 
 - Get key: [console.groq.com/keys](https://console.groq.com/keys)
 - No credit card required
-- Model: `llama-3.1-70b-versatile`
+- Model: `llama-3.3-70b-versatile`
 - Rate limits apply on free tier (generous for personal use)
 
 ### 5. Google Custom Search — Free Tier ✅
